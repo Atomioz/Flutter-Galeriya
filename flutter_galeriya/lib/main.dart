@@ -3,57 +3,91 @@ import 'package:image_picker/image_picker.dart';
 import 'package:carousel_slider/carousel_slider.dart';
 import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:provider/provider.dart';
+import 'theme_notifier.dart';
 
 void main() {
-  runApp(FlutterGaleriyaApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: FlutterGaleriyaApp(),
+    ),
+  );
 }
 
 class FlutterGaleriyaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return MaterialApp(
       title: 'Flutter-Galeriya',
       theme: ThemeData(
         primarySwatch: Colors.blue,
+        brightness: Brightness.light,
       ),
-      home: GalleryScreen(),
+      darkTheme: ThemeData(
+        brightness: Brightness.dark,
+      ),
+      themeMode: themeNotifier.themeMode,
+      home: HomeScreen(),
     );
+  }
+}
+
+class HomeScreen extends StatefulWidget {
+  @override
+  _HomeScreenState createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
+  int _selectedIndex = 0;
+  final GlobalKey<GalleryScreenState> _galleryKey = GlobalKey();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _selectedIndex,
+        children: [
+          GalleryScreen(key: _galleryKey),
+          SettingsScreen(),
+        ],
+      ),
+      bottomNavigationBar: BottomNavigationBar(
+        items: const <BottomNavigationBarItem>[
+          BottomNavigationBarItem(
+            icon: Icon(Icons.photo),
+            label: 'Gallery',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
+        ],
+        currentIndex: _selectedIndex,
+        selectedItemColor: Colors.blue,
+        onTap: _onItemTapped,
+      ),
+    );
+  }
+
+  void _onItemTapped(int index) {
+    setState(() {
+      _selectedIndex = index;
+    });
   }
 }
 
 class GalleryScreen extends StatefulWidget {
+  GalleryScreen({Key? key}) : super(key: key);
+
   @override
-  _GalleryScreenState createState() => _GalleryScreenState();
+  GalleryScreenState createState() => GalleryScreenState();
 }
 
-class _GalleryScreenState extends State<GalleryScreen> {
+class GalleryScreenState extends State<GalleryScreen> {
   List<dynamic> _images = [];
-
-  Future<void> _pickImages() async {
-    final picker = ImagePicker();
-    final pickedImages = await picker.pickMultiImage();
-    if (pickedImages != null) {
-      setState(() {
-        if (kIsWeb) {
-          _images.addAll(pickedImages.map((image) => image.path));
-        } else {
-          _images.addAll(pickedImages.map((image) => File(image.path)));
-        }
-      });
-    }
-  }
-
-  void _openFullScreen(int initialIndex) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FullScreenViewer(
-          images: _images,
-          initialIndex: initialIndex,
-        ),
-      ),
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -90,6 +124,32 @@ class _GalleryScreenState extends State<GalleryScreen> {
       ),
     );
   }
+
+  Future<void> _pickImages() async {
+    final picker = ImagePicker();
+    final pickedImages = await picker.pickMultiImage();
+    if (pickedImages != null) {
+      setState(() {
+        if (kIsWeb) {
+          _images.addAll(pickedImages.map((image) => image.path));
+        } else {
+          _images.addAll(pickedImages.map((image) => File(image.path)));
+        }
+      });
+    }
+  }
+
+  void _openFullScreen(int initialIndex) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FullScreenViewer(
+          images: _images,
+          initialIndex: initialIndex,
+        ),
+      ),
+    );
+  }
 }
 
 class FullScreenViewer extends StatelessWidget {
@@ -119,6 +179,33 @@ class FullScreenViewer extends StatelessWidget {
                 : Image.file(images[index], fit: BoxFit.contain),
           );
         },
+      ),
+    );
+  }
+}
+
+class SettingsScreen extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+    return Scaffold(
+      appBar: AppBar(
+        title: Text('Settings'),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: ListView(
+          children: <Widget>[
+            SwitchListTile(
+              title: Text('Dark Mode'),
+              value: themeNotifier.themeMode == ThemeMode.dark,
+              onChanged: (bool value) {
+                themeNotifier.toggleTheme(value);
+              },
+            ),
+          ],
+        ),
       ),
     );
   }
