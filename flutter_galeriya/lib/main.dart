@@ -1,25 +1,16 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart' show kIsWeb;
-import 'package:provider/provider.dart';
-import 'theme_notifier.dart';
+import 'package:video_player/video_player.dart';
 
 void main() {
-  runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeNotifier(),
-      child: FlutterGaleriyaApp(),
-    ),
-  );
+  runApp(FlutterGaleriyaApp());
 }
 
 class FlutterGaleriyaApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-
     return MaterialApp(
       title: 'Flutter-Galeriya',
       theme: ThemeData(
@@ -29,7 +20,6 @@ class FlutterGaleriyaApp extends StatelessWidget {
       darkTheme: ThemeData(
         brightness: Brightness.dark,
       ),
-      themeMode: themeNotifier.themeMode,
       home: HomeScreen(),
     );
   }
@@ -42,7 +32,6 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _selectedIndex = 0;
-  final GlobalKey<GalleryScreenState> _galleryKey = GlobalKey();
 
   @override
   Widget build(BuildContext context) {
@@ -50,7 +39,8 @@ class _HomeScreenState extends State<HomeScreen> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          GalleryScreen(key: _galleryKey),
+          GalleryScreen(),
+          VideoScreen(),
           SettingsScreen(),
         ],
       ),
@@ -59,6 +49,10 @@ class _HomeScreenState extends State<HomeScreen> {
           BottomNavigationBarItem(
             icon: Icon(Icons.photo),
             label: 'Gallery',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.video_library),
+            label: 'Videos',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.settings),
@@ -80,14 +74,12 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 class GalleryScreen extends StatefulWidget {
-  GalleryScreen({Key? key}) : super(key: key);
-
   @override
-  GalleryScreenState createState() => GalleryScreenState();
+  _GalleryScreenState createState() => _GalleryScreenState();
 }
 
-class GalleryScreenState extends State<GalleryScreen> {
-  List<dynamic> _images = [];
+class _GalleryScreenState extends State<GalleryScreen> {
+  List<dynamic> _media = [];
 
   @override
   Widget build(BuildContext context) {
@@ -103,109 +95,131 @@ class GalleryScreenState extends State<GalleryScreen> {
             crossAxisSpacing: 4.0,
             mainAxisSpacing: 4.0,
           ),
-          itemCount: _images.length,
+          itemCount: _media.length,
           itemBuilder: (context, index) {
-            return GestureDetector(
-              onTap: () => _openFullScreen(index),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(8.0),
-                child: kIsWeb
-                    ? Image.network(_images[index], fit: BoxFit.cover)
-                    : Image.file(_images[index], fit: BoxFit.cover),
-              ),
-            );
+            if (_media[index] is File) {
+              return GestureDetector(
+                onTap: () => _openFullScreen(index),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8.0),
+                  child: Image.file(_media[index], fit: BoxFit.cover),
+                ),
+              );
+            } else if (_media[index] is String) {
+              return GestureDetector(
+                onTap: () => _openVideoPlayer(_media[index]),
+                child: Container(
+                  color: Colors.grey[300],
+                  child: Center(
+                    child: Icon(Icons.play_circle_fill),
+                  ),
+                ),
+              );
+            }
+            return SizedBox();
           },
         ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: _pickImages,
-        tooltip: 'Pick Images',
+        onPressed: _pickMedia,
+        tooltip: 'Pick Media',
         child: Icon(Icons.add),
       ),
     );
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _pickMedia() async {
     final picker = ImagePicker();
-    final pickedImages = await picker.pickMultiImage();
-    if (pickedImages != null) {
+    final pickedMedia = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedMedia != null) {
       setState(() {
-        if (kIsWeb) {
-          _images.addAll(pickedImages.map((image) => image.path));
-        } else {
-          _images.addAll(pickedImages.map((image) => File(image.path)));
-        }
+        _media.add(File(pickedMedia.path));
       });
     }
   }
 
   void _openFullScreen(int initialIndex) {
+    // Full screen image viewer implementation
+  }
+
+  void _openVideoPlayer(String videoPath) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FullScreenViewer(
-          images: _images,
-          initialIndex: initialIndex,
-        ),
+        builder: (context) => VideoPlayerScreen(videoPath: videoPath),
       ),
     );
   }
 }
 
-class FullScreenViewer extends StatelessWidget {
-  final List<dynamic> images;
-  final int initialIndex;
 
-  FullScreenViewer({required this.images, required this.initialIndex});
-
+class VideoScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.black,
+        title: Text('Videos'),
       ),
-      body: CarouselSlider.builder(
-        itemCount: images.length,
-        options: CarouselOptions(
-          initialPage: initialIndex,
-          enableInfiniteScroll: false,
-          enlargeCenterPage: true,
-          height: double.infinity,
-        ),
-        itemBuilder: (context, index, realIndex) {
-          return Center(
-            child: kIsWeb
-                ? Image.network(images[index], fit: BoxFit.contain)
-                : Image.file(images[index], fit: BoxFit.contain),
-          );
-        },
+      body: Center(
+        child: Text('Video Tab Content'),
       ),
     );
+  }
+}
+
+class VideoPlayerScreen extends StatefulWidget {
+  final String videoPath;
+
+  const VideoPlayerScreen({Key? key, required this.videoPath}) : super(key: key);
+
+  @override
+  _VideoPlayerScreenState createState() => _VideoPlayerScreenState();
+}
+
+class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+  late VideoPlayerController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = VideoPlayerController.file(File(widget.videoPath))
+      ..initialize().then((_) {
+        setState(() {});
+        _controller.play();
+      });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(),
+      body: Center(
+        child: _controller.value.isInitialized
+            ? AspectRatio(
+                aspectRatio: _controller.value.aspectRatio,
+                child: VideoPlayer(_controller),
+              )
+            : CircularProgressIndicator(),
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
+    _controller.dispose();
   }
 }
 
 class SettingsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    final themeNotifier = Provider.of<ThemeNotifier>(context);
-
     return Scaffold(
       appBar: AppBar(
         title: Text('Settings'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListView(
-          children: <Widget>[
-            SwitchListTile(
-              title: Text('Dark Mode'),
-              value: themeNotifier.themeMode == ThemeMode.dark,
-              onChanged: (bool value) {
-                themeNotifier.toggleTheme(value);
-              },
-            ),
-          ],
-        ),
+      body: Center(
+        child: Text('Settings Tab Content'),
       ),
     );
   }

@@ -1,0 +1,37 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Flutter Debug",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "program": "flutter_galeriya\lib\main.dart", // Adjust if your main Dart file is located elsewhere
+            "deviceId": "7c452fea" // Your device serial number
+        },
+
+        {
+            "name": "flutter_galeriya",
+            "cwd": "flutter_galeriya",
+            "request": "launch",
+            "type": "dart"
+        },
+        {
+            "name": "flutter_galeriya (profile mode)",
+            "cwd": "flutter_galeriya",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile"
+        },
+        {
+            "name": "flutter_galeriya (release mode)",
+            "cwd": "flutter_galeriya",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release"
+        }
+    ]
+}
